@@ -5,6 +5,9 @@
 package com.github.paramaeleon.collections;
 
 import java.util.*;
+import java.util.function.*;
+
+import javax.annotation.*;
 
 /**
  * Compares two sorted sets in a very performing manner.
@@ -41,7 +44,7 @@ public class ParallelTwoSortedSetsTraverser {
      * undefined. If you’re unsure, pass in two {@link TreeSet}s.
      *
      * @param <T>   type of objects to be iterated over, must be
-     *              {@code Comparable<T>}.
+     *              {@code Comparable<T>}
      *
      * @param left  the one sorted set
      * @param right the other sorted set
@@ -51,7 +54,47 @@ public class ParallelTwoSortedSetsTraverser {
      *         the first.
      */
     public static <T extends Comparable<T>> Map<T, Boolean> findDifferences(Iterable<T> left, Iterable<T> right) {
+        // assertions are checked in process()
+
         final Map<T, Boolean> result = new HashMap<>();
+        process(left, right,
+            λ -> result.put(λ, Boolean.TRUE),
+            null,
+            λ -> result.put(λ, Boolean.FALSE)
+        );
+        return result;
+    }
+
+    /**
+     * Compares two sorted sets and invokes functions on the objects, depending
+     * on whether they are only in the left, in both, or only in the right set.
+     * The method takes two arbitrary iterables to be generic. So you can, for
+     * example, also compare two arbitrary collections of files or database IDs,
+     * which are known to be sorted sets (that is, ascending order as per the
+     * native {@code compareTo(…)} of the objects, and no duplicates). If you
+     * know this, but the database only returns a generic collection type, you
+     * can pass it anyway. The calling side is responsible for that these are
+     * actually sorted. If they are not, the outcome is undefined. If you’re
+     * unsure, pass in two {@link TreeSet}s.
+     *
+     * @param <T>             type of objects to be iterated over, must be
+     *                        {@code Comparable<T>}
+     * @param left            the one sorted set
+     * @param right           the other sorted set
+     * @param withLeftOnlyDo  function to invoke on objects only found in the
+     *                        left set
+     * @param withInBothDo    function to invoke on objects found in both sets
+     * @param withRightOnlyDo function to invoke on objects only found in the
+     *                        right set
+     */
+    public static <T extends Comparable<T>> void process(Iterable<T> left, Iterable<T> right,
+            @Nullable Consumer<T> withLeftOnlyDo, @Nullable Consumer<T> withInBothDo,
+            @Nullable Consumer<T> withRightOnlyDo) {
+        assert left != null : "'left' should not be null";
+        assert OrderChecker.isStrictlyMonotonouslyIncreasing(left) : "'left' should be sorted";
+        assert right != null : "'right' should not be null";
+        assert OrderChecker.isStrictlyMonotonouslyIncreasing(right) : "'right' should be sorted";
+
         Iterator<T> leftIterator = left.iterator();
         Iterator<T> rightIterator = right.iterator();
         boolean nextLeft = true;
@@ -69,17 +112,23 @@ public class ParallelTwoSortedSetsTraverser {
             }
             boolean comparable = currentLeft != null && currentRight != null;
             if (currentLeft != null && currentRight == null || comparable && currentLeft.compareTo(currentRight) < 0) {
-                result.put(currentLeft, Boolean.TRUE);
+                if (withLeftOnlyDo != null) {
+                    withLeftOnlyDo.accept(currentLeft);
+                }
                 nextLeft = true;
             } else if (currentLeft == null && currentRight != null
                     || comparable && currentLeft.compareTo(currentRight) > 0) {
-                result.put(currentRight, Boolean.FALSE);
+                if (withRightOnlyDo != null) {
+                    withRightOnlyDo.accept(currentRight);
+                }
                 nextRight = true;
             } else if (comparable) {
+                if (withInBothDo != null) {
+                    withInBothDo.accept(currentLeft);
+                }
                 nextLeft = true;
                 nextRight = true;
             }
         }
-        return result;
     }
 }
