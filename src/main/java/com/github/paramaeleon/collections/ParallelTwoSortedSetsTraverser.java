@@ -28,8 +28,10 @@ import javax.annotation.*;
  * <p>
  * This class implements functionality for comparing <i>two</i> sorted sets,
  * where you typically have a conceptual “left side” and “right side”.
+ *
+ * @param <T>
  */
-public class ParallelTwoSortedSetsTraverser {
+public class ParallelTwoSortedSetsTraverser<T extends Comparable<T>> {
 
     /**
      * Compares two sorted sets and returns the differences. Finding the
@@ -57,11 +59,7 @@ public class ParallelTwoSortedSetsTraverser {
         // assertions are checked in process()
 
         final Map<T, Boolean> result = new HashMap<>();
-        process(left, right,
-            λ -> result.put(λ, Boolean.TRUE),
-            null,
-            λ -> result.put(λ, Boolean.FALSE)
-        );
+        process(left, right, λ -> result.put(λ, Boolean.TRUE), null, λ -> result.put(λ, Boolean.FALSE));
         return result;
     }
 
@@ -130,5 +128,111 @@ public class ParallelTwoSortedSetsTraverser {
                 nextRight = true;
             }
         }
+    }
+
+    /**
+     * Action to perform on objects in both sets.
+     */
+    protected Consumer<T> withInBothDo = null;
+
+    /**
+     * Action to perform on objects in left-side set only.
+     */
+    protected Consumer<T> withLeftOnlyDo = null;
+
+    /**
+     * Action to perform on objects in right-side set only.
+     */
+    protected Consumer<T> withRightOnlyDo = null;
+
+    /**
+     * <b>Constructor.</b><!-- --> Creates a new ParallelTwoSortedSetsTraverser.
+     */
+    public ParallelTwoSortedSetsTraverser() { }
+
+    /**
+     * <b>Constructor.</b><!-- --> Creates a new ParallelTwoSortedSetsTraverser
+     * with an action to invoke on objects found in both lists.
+     *
+     * @param withInBothDo action to perform on objects in both sets
+     */
+    public ParallelTwoSortedSetsTraverser(Consumer<T> withInBothDo) {
+        this.withInBothDo = withInBothDo;
+    }
+
+    /**
+     * <b>Constructor.</b><!-- --> Creates a new ParallelTwoSortedSetsTraverser
+     * with actions to invoke on objects found on in one of the two sets only.
+     *
+     * @param withLeftOnlyDo  action to perform on objects in left-side set only
+     * @param withRightOnlyDo action to perform on objects in right-side set
+     *                        only
+     */
+    public ParallelTwoSortedSetsTraverser(Consumer<T> withLeftOnlyDo, Consumer<T> withRightOnlyDo) {
+        this.withLeftOnlyDo = withLeftOnlyDo;
+        this.withRightOnlyDo = withRightOnlyDo;
+    }
+
+    /**
+     * <b>Constructor.</b><!-- --> Creates a new ParallelTwoSortedSetsTraverser
+     * with actions to invoke on objects.
+     *
+     * @param withLeftOnlyDo  action to perform on objects in left-side set only
+     * @param withInBothDo    action to perform on objects in both sets
+     * @param withRightOnlyDo action to perform on objects in right-side set
+     *                        only
+     */
+    public ParallelTwoSortedSetsTraverser(Consumer<T> withLeftOnlyDo, Consumer<T> withInBothDo,
+            Consumer<T> withRightOnlyDo) {
+
+        this.withLeftOnlyDo = withLeftOnlyDo;
+        this.withRightOnlyDo = withRightOnlyDo;
+    }
+
+    /**
+     * Processes two sets and invokes the previously defined actions on them.
+     *
+     * @param left  the one sorted set
+     * @param right the other sorted set
+     */
+    public void process(Iterable<T> left, Iterable<T> right) {
+        // assertions are checked in process()
+
+        process(left, right, withLeftOnlyDo, withInBothDo, withRightOnlyDo);
+    }
+
+    /**
+     * Sets an action to perform on objects that exist in both sets.
+     *
+     * @param withRightOnlyDo action to perform
+     * @return itself, for method chaining
+     */
+    public ParallelTwoSortedSetsTraverser<T> withInBothDo(@Nullable Consumer<T> withInBothDo) {
+        this.withInBothDo = withInBothDo;
+        return this;
+    }
+
+    /**
+     * Sets an action to perform on objects that only exist in the left-side
+     * set.
+     *
+     * @param withRightOnlyDo action to perform
+     * @return itself, for method chaining
+     */
+    public ParallelTwoSortedSetsTraverser<T> withLeftOnlyDo(@Nullable Consumer<T> withLeftOnlyDo) {
+        this.withLeftOnlyDo = withLeftOnlyDo;
+        return this;
+    }
+
+    /**
+     * Sets an action to perform on objects that only exist in the right-side
+     * set.
+     *
+     * @param withRightOnlyDo action to perform
+     * @return itself, for method chaining
+     */
+    public ParallelTwoSortedSetsTraverser<T> withRightOnlyDo(@Nullable Consumer<T> withRightOnlyDo) {
+        this.withRightOnlyDo = withRightOnlyDo;
+        return this;
     }
 }
